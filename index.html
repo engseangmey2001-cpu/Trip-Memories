@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1769d2"><link rel="manifest" href="manifest.json">
+<title>Trip Memories</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+:root{--b:#1769d2;--bg:#f5f8fc;--card:#fff;--t:#142033;--m:#718096}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--t);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.app{max-width:620px;margin:auto;min-height:100vh}
+header{padding:22px 18px 10px;display:flex;align-items:center;justify-content:space-between}h1{font-size:28px;margin:0}.sub{color:var(--m);font-size:14px;margin-top:4px}
+button{border:0;cursor:pointer;font:inherit;font-weight:700;border-radius:14px;padding:11px 15px}.primary{background:var(--b);color:#fff}.icon{background:#fff;font-size:23px;width:45px;height:45px;padding:0}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;padding:9px 16px}.stat,.card{background:var(--card);border-radius:18px;padding:14px;box-shadow:0 4px 18px #18324d0c}.stat b{font-size:20px;display:block}.stat span{font-size:12px;color:var(--m)}
+.tabs{display:flex;gap:7px;padding:8px 16px}.tab{background:#fff;color:#526178}.tab.active{background:var(--b);color:#fff}.search{padding:0 16px 5px}.search input,.field input,.field textarea{width:100%;border:1px solid #dce5f0;border-radius:13px;padding:13px;font:inherit;background:#fff}.list{padding:7px 16px 95px}.place{display:flex;gap:12px;align-items:center;margin:10px 0}.thumb{width:90px;height:78px;border-radius:14px;object-fit:cover;background:#dfebf8}.place h3{margin:0 0 4px;font-size:16px}.place p{margin:2px 0;color:var(--m);font-size:12px}.rating{color:#e6a400;font-weight:700}
+nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);max-width:620px;width:100%;background:#fff;display:flex;justify-content:space-around;padding:9px 6px calc(9px + env(safe-area-inset-bottom));box-shadow:0 -4px 18px #18324d12;z-index:30}nav button{background:none;color:#6e7c91;padding:5px 10px;font-size:12px}nav .fab{background:var(--b);color:#fff;border-radius:50%;width:53px;height:53px;margin-top:-25px;font-size:23px}
+.page{display:none;padding-bottom:88px}.page.active{display:block}.form{padding:15px}.field{margin:13px 0}.field label{display:block;font-weight:700;font-size:13px;margin-bottom:7px}.field textarea{min-height:110px;resize:vertical}
+.photos{display:flex;gap:8px;overflow:auto}.photos img,.photoAdd{width:86px;height:86px;min-width:86px;border-radius:12px;object-fit:cover}.photoAdd{border:2px dashed #b8c8dc;display:grid;place-items:center;color:var(--b);font-size:27px}.stars{display:flex;gap:5px;font-size:31px}.star{color:#cbd5e1}.star.on{color:#e6a400}
+.locationRow{display:flex;gap:8px}.locationRow input{flex:1}.small{background:#eaf3ff;color:var(--b);white-space:nowrap}.back{margin:10px 16px;background:#fff}.hero{width:100%;height:300px;object-fit:cover}.detail{padding:17px}.map{height:calc(100vh - 120px);min-height:520px}.gallery{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:15px}.gallery img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:10px}.empty{text-align:center;padding:55px 22px;color:var(--m)}
+.actions{display:flex;gap:8px;margin-top:15px}.danger{background:#fff0f0;color:#c33}.success{background:#eaf8ef;color:#16803d}.notice{font-size:12px;color:var(--m);padding:10px 16px}
+</style>
+</head>
+<body><div class="app">
+
+<section id="home" class="page active">
+<header><div><h1>My Trips</h1><div class="sub">Collect moments, not just places ♥</div></div><button class="icon" onclick="newPlace()">＋</button></header>
+<div class="stats"><div class="stat"><b id="sPlaces">0</b><span>Places</span></div><div class="stat"><b id="sCountries">0</b><span>Countries</span></div><div class="stat"><b id="sAvg">0</b><span>Avg. rating</span></div></div>
+<div class="tabs"><button class="tab active" data-filter="all">All</button><button class="tab" data-filter="fav">♥ Favorites</button><button class="tab" data-filter="rated">★ Rated</button></div>
+<div class="search"><input id="search" placeholder="Search places or memories…" oninput="renderHome()"></div>
+<div id="list" class="list"></div></section>
+
+<section id="add" class="page">
+<header><div><h1 id="formTitle">Add Place</h1><div class="sub">Save your travel memory</div></div><button class="primary" onclick="savePlace()">Save</button></header>
+<div class="form">
+<div class="field"><label>Photos</label><div id="photos" class="photos"><label class="photoAdd">＋<input id="files" type="file" accept="image/*" multiple hidden onchange="preview()"></label></div></div>
+<div class="field"><label>Place name</label><input id="name" placeholder="e.g. Angkor Wat"></div>
+<div class="field"><label>Location</label><div class="locationRow"><input id="location" placeholder="City, Country"><button class="small" onclick="detectLocation()">📍 GPS</button></div><div id="locStatus" class="notice"></div></div>
+<div class="field"><label>Date visited</label><input id="date" type="date"></div>
+<div class="field"><label>Rating</label><div id="stars" class="stars"></div></div>
+<div class="field"><label>Your memory</label><textarea id="notes" placeholder="What did you see, eat, feel or remember?"></textarea></div>
+<div class="field"><button id="fav" class="small" onclick="toggleFav()">♡ Add to favorites</button></div>
+<div id="editActions" class="actions" style="display:none"><button class="danger" onclick="deleteEditing()">Delete memory</button></div>
+</div></section>
+
+<section id="detailPage" class="page"><button class="back" onclick="showPage('home')">‹ Back</button><div id="detail"></div></section>
+<section id="mapPage" class="page"><header><div><h1>Trip Map</h1><div class="sub">Tap a pin to open your memory</div></div></header><div id="map" class="map"></div></section>
+<section id="galleryPage" class="page"><header><div><h1>Gallery</h1><div class="sub">Your travel photos</div></div></header><div id="gallery" class="gallery"></div></section>
+<section id="profilePage" class="page"><header><div><h1>My Profile</h1><div class="sub">Small steps, big memories ♥</div></div></header>
+<div class="form"><div class="card"><h2 id="pCount">0 places</h2><p class="sub">Your memories are stored on this device.</p><div class="actions"><button class="success" onclick="exportData()">⬇ Backup</button><button class="small" onclick="document.getElementById('import').click()">⬆ Restore</button><input id="import" type="file" accept=".json" hidden onchange="importData()"></div></div></div></section>
+
+<nav><button onclick="showPage('home')">⌂<br>Home</button><button onclick="showPage('mapPage')">⌖<br>Map</button><button class="fab" onclick="newPlace()">＋</button><button onclick="showPage('galleryPage')">▧<br>Gallery</button><button onclick="showPage('profilePage')">♙<br>Profile</button></nav>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+let places=JSON.parse(localStorage.getItem('tripMemoriesV2')||'[]'),filter='all',editing=null,rating=0,favorite=false,coords=null,map;
+const $=id=>document.getElementById(id);
+function persist(){localStorage.setItem('tripMemoriesV2',JSON.stringify(places))}
+function esc(x){return String(x||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]))}
+function showPage(id){document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));$(id).classList.add('active');if(id==='mapPage')setTimeout(renderMap,80);if(id==='galleryPage')renderGallery();if(id==='home')renderHome();scrollTo(0,0)}
+function newPlace(){editing=null;resetForm();showPage('add')}
+function resetForm(){ $('formTitle').textContent='Add Place';$('name').value='';$('location').value='';$('date').valueAsDate=new Date();$('notes').value='';$('locStatus').textContent='';$('editActions').style.display='none';$('fav').textContent='♡ Add to favorites';rating=0;favorite=false;coords=null;renderStars();$('photos').innerHTML='<label class="photoAdd">＋<input id="files" type="file" accept="image/*" multiple hidden onchange="preview()"></label>'}
+function renderStars(){$('stars').innerHTML=[1,2,3,4,5].map(n=>`<span class="star ${n<=rating?'on':''}" onclick="rating=${n};renderStars()">★</span>`).join('')}
+function toggleFav(){favorite=!favorite;$('fav').textContent=favorite?'♥ Added to favorites':'♡ Add to favorites'}
+function preview(){let box=$('photos');box.innerHTML='<label class="photoAdd">＋<input id="files" type="file" accept="image/*" multiple hidden onchange="preview()"></label>';[...$('files').files].slice(0,10).forEach(f=>{let r=new FileReader();r.onload=e=>{let im=document.createElement('img');im.src=e.target.result;box.insertBefore(im,box.firstChild)};r.readAsDataURL(f)})}
+function read(f){return new Promise(r=>{let x=new FileReader();x.onload=()=>r(x.result);x.readAsDataURL(f)})}
+async function savePlace(){
+ if(!$('name').value.trim()){alert('Please enter a place name.');return}
+ let photos=[...document.querySelectorAll('#photos img')].map(x=>x.src);
+ if($('files').files.length)photos=await Promise.all([...$('files').files].slice(0,10).map(read));
+ let p={id:editing||crypto.randomUUID(),name:$('name').value.trim(),location:$('location').value.trim(),date:$('date').value,rating,notes:$('notes').value.trim(),favorite,photos,lat:coords?.lat||null,lng:coords?.lng||null};
+ let i=places.findIndex(x=>x.id===p.id);if(i>=0)places[i]=p;else places.push(p);persist();showPage('home')
+}
+function editPlace(id){let p=places.find(x=>x.id===id);if(!p)return;editing=id;$('formTitle').textContent='Edit Place';$('name').value=p.name;$('location').value=p.location;$('date').value=p.date;$('notes').value=p.notes||'';rating=p.rating||0;favorite=!!p.favorite;coords=p.lat?{lat:p.lat,lng:p.lng}:null;$('fav').textContent=favorite?'♥ Added to favorites':'♡ Add to favorites';$('editActions').style.display='block';$('photos').innerHTML=(p.photos||[]).map(x=>`<img src="${x}">`).join('')+'<label class="photoAdd">＋<input id="files" type="file" accept="image/*" multiple hidden onchange="preview()"></label>';renderStars();showPage('add')}
+function deleteEditing(){if(confirm('Delete this memory?')){places=places.filter(x=>x.id!==editing);persist();showPage('home')}}
+function openDetail(id){let p=places.find(x=>x.id===id);if(!p)return;$('detail').innerHTML=`<img class="hero" src="${p.photos?.[0]||''}"><div class="detail"><h1>${esc(p.name)} ${p.favorite?'♥':''}</h1><p class="rating">★ ${p.rating||0}/5</p><p>📍 ${esc(p.location||'Location not added')}</p><p>📅 ${esc(p.date||'')}</p><div class="card"><p>${esc(p.notes||'No memory written yet.')}</p></div><div class="photos" style="margin-top:12px">${(p.photos||[]).map(x=>`<img src="${x}">`).join('')}</div><div class="actions"><button class="primary" onclick="editPlace('${p.id}')">Edit memory</button></div></div>`;showPage('detailPage')}
+function renderHome(){let q=$('search').value.toLowerCase();let a=places.filter(p=>{let f=filter==='all'||(filter==='fav'&&p.favorite)||(filter==='rated'&&p.rating>0);return f&&((p.name+' '+p.location+' '+p.notes).toLowerCase().includes(q))});$('list').innerHTML=a.length?a.slice().reverse().map(p=>`<div class="card place" onclick="openDetail('${p.id}')"><img class="thumb" src="${p.photos?.[0]||''}"><div style="flex:1"><h3>${esc(p.name)} ${p.favorite?'♥':''}</h3><p>📍 ${esc(p.location||'No location')}</p><p>📅 ${p.date||''}</p><span class="rating">${'★'.repeat(p.rating||0)}${'☆'.repeat(5-(p.rating||0))} ${p.rating||0}</span></div></div>`).join(''):'<div class="empty">No memories yet.<br>Tap ＋ to add your first trip.</div>';stats()}
+function stats(){let countries=[...new Set(places.map(p=>(p.location||'').split(',').pop().trim()).filter(Boolean))];$('sPlaces').textContent=places.length;$('sCountries').textContent=countries.length;$('sAvg').textContent=places.length?(places.reduce((a,p)=>a+(p.rating||0),0)/places.length).toFixed(1):'0';$('pCount').textContent=places.length+' place'+(places.length===1?'':'s')}
+document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));b.classList.add('active');filter=b.dataset.filter;renderHome()})
+function detectLocation(){if(!navigator.geolocation){alert('GPS is not available.');return}$('locStatus').textContent='Finding your location…';navigator.geolocation.getCurrentPosition(async pos=>{coords={lat:pos.coords.latitude,lng:pos.coords.longitude};try{let r=await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${coords.lat}&lon=${coords.lng}`);let d=await r.json();let a=d.address||{};$('location').value=d.display_name||`${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}`;$('locStatus').textContent='✓ Location detected'}catch(e){$('location').value=`${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}`;$('locStatus').textContent='✓ GPS coordinates saved'}},()=>{$('locStatus').textContent='Could not access GPS. You can enter the location manually.'},{enableHighAccuracy:true,timeout:10000})}
+function renderMap(){if(map)map.remove();map=L.map('map').setView([12.5657,104.991],6);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap contributors'}).addTo(map);let valid=places.filter(p=>p.lat&&p.lng);valid.forEach(p=>L.marker([p.lat,p.lng]).addTo(map).bindPopup(`<b>${esc(p.name)}</b><br>⭐ ${p.rating||0}<br><button onclick="openDetail('${p.id}')">Open memory</button>`));if(valid.length)map.fitBounds(valid.map(p=>[p.lat,p.lng]),{padding:[30,30]})}
+function renderGallery(){$('gallery').innerHTML=places.flatMap(p=>(p.photos||[]).map(x=>`<img src="${x}" onclick="openDetail('${p.id}')">`)).join('')||'<div class="empty" style="grid-column:1/-1">Your travel photos will appear here.</div>'}
+function exportData(){let blob=new Blob([JSON.stringify({app:'Trip Memories',version:2,places},null,2)],{type:'application/json'});let a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='trip-memories-backup.json';a.click()}
+function importData(){let f=$('import').files[0];if(!f)return;let r=new FileReader();r.onload=()=>{try{let d=JSON.parse(r.result);if(!Array.isArray(d.places))throw 0;places=d.places;persist();renderHome();alert('Backup restored successfully.')}catch(e){alert('That backup file is not valid.')}};r.readAsText(f)}
+renderStars();renderHome();
+</script></body></html>
