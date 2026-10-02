@@ -61,11 +61,29 @@ function newPlace(){editing=null;resetForm();showPage('add')}
 function resetForm(){ $('formTitle').textContent='Add Place';$('name').value='';$('location').value='';$('date').valueAsDate=new Date();$('notes').value='';$('locStatus').textContent='';$('editActions').style.display='none';$('fav').textContent='♡ Add to favorites';rating=0;favorite=false;coords=null;renderStars();$('photos').innerHTML='<label class="photoAdd">＋<input id="files" type="file" accept="image/*" multiple hidden onchange="preview()"></label>'}
 function renderStars(){$('stars').innerHTML=[1,2,3,4,5].map(n=>`<span class="star ${n<=rating?'on':''}" onclick="rating=${n};renderStars()">★</span>`).join('')}
 function toggleFav(){favorite=!favorite;$('fav').textContent=favorite?'♥ Added to favorites':'♡ Add to favorites'}
-function preview(){let box=$('photos');box.innerHTML='<label class="photoAdd">＋<input id="files" type="file" accept="image/*" multiple hidden onchange="preview()"></label>';[...$('files').files].slice(0,10).forEach(f=>{let r=new FileReader();r.onload=e=>{let im=document.createElement('img');im.src=e.target.result;box.insertBefore(im,box.firstChild)};r.readAsDataURL(f)})}
+function preview(){
+  const input=$('files');
+  const box=$('photos');
+
+  box.innerHTML='<label class="photoAdd">＋<input id="files" type="file" accept="image/*" multiple hidden onchange="preview()"></label>';
+
+  [...input.files].slice(0,10).forEach(file=>{
+    const reader=new FileReader();
+    reader.onload=e=>{
+      const img=document.createElement('img');
+      img.src=e.target.result;
+      img.dataset.photo=e.target.result;
+      box.insertBefore(img,box.firstChild);
+    };
+    reader.readAsDataURL(file);
+  });
+}
 function read(f){return new Promise(r=>{let x=new FileReader();x.onload=()=>r(x.result);x.readAsDataURL(f)})}
 async function savePlace(){
  if(!$('name').value.trim()){alert('Please enter a place name.');return}
- let photos=[...document.querySelectorAll('#photos img')].map(x=>x.src);
+ let photos=[...document.querySelectorAll('#photos img')]
+  .map(x=>x.dataset.photo||x.src)
+  .filter(Boolean);
  if($('files').files.length)photos=await Promise.all([...$('files').files].slice(0,10).map(read));
  let p={id:editing||crypto.randomUUID(),name:$('name').value.trim(),location:$('location').value.trim(),date:$('date').value,rating,notes:$('notes').value.trim(),favorite,photos,lat:coords?.lat||null,lng:coords?.lng||null};
  let i=places.findIndex(x=>x.id===p.id);if(i>=0)places[i]=p;else places.push(p);persist();showPage('home')
